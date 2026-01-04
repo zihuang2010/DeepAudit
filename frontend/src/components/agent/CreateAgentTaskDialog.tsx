@@ -300,29 +300,56 @@ export default function CreateAgentTaskDialog({
           {/* 配置区域 */}
           {selectedProject && (
             <div className="space-y-4">
-              {/* 仓库项目：分支选择 */}
+              {/* 仓库项目：分支选择（带搜索） */}
               {isRepositoryProject(selectedProject) && (
-                <div className="flex items-center gap-3 p-3 border border-border rounded bg-blue-950/20">
-                  <GitBranch className="w-5 h-5 text-blue-400" />
-                  <span className="font-mono text-sm text-muted-foreground w-16">Branch</span>
-                  {loadingBranches ? (
-                    <div className="flex items-center gap-2 flex-1">
-                      <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-                      <span className="text-sm text-blue-400 font-mono">Loading...</span>
-                    </div>
-                  ) : (
-                    <Select value={branch} onValueChange={setBranch}>
-                      <SelectTrigger className="flex-1 h-9 cyber-input">
-                        <SelectValue placeholder="Select branch" />
-                      </SelectTrigger>
-                      <SelectContent className="cyber-dialog border-border">
-                        {branches.map((b) => (
-                          <SelectItem key={b} value={b} className="font-mono text-foreground">
-                            {b}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-3 border border-border rounded bg-blue-950/20">
+                    <GitBranch className="w-5 h-5 text-blue-400" />
+                    <span className="font-mono text-sm text-muted-foreground w-16">Branch</span>
+                    {loadingBranches ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                        <span className="text-sm text-blue-400 font-mono">Loading...</span>
+                      </div>
+                    ) : (
+                      <div className="flex-1 relative">
+                        <Input
+                          placeholder="Search branches..."
+                          value={branch}
+                          onChange={(e) => setBranch(e.target.value)}
+                          className="h-9 cyber-input font-mono"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {/* 分支快速选择列表 */}
+                  {!loadingBranches && branches.length > 0 && (
+                    <ScrollArea className="max-h-[120px] border border-border rounded bg-muted/50">
+                      <div className="p-1 space-y-0.5">
+                        {branches
+                          .filter((b) => b.toLowerCase().includes(branch.toLowerCase()) || !branch)
+                          .slice(0, 20) // 最多显示 20 个
+                          .map((b) => (
+                            <button
+                              key={b}
+                              type="button"
+                              onClick={() => setBranch(b)}
+                              className={`w-full text-left px-2 py-1.5 rounded text-sm font-mono transition-colors ${branch === b
+                                  ? 'bg-blue-500/20 text-blue-400'
+                                  : 'text-foreground hover:bg-muted'
+                                }`}
+                            >
+                              <GitBranch className="w-3 h-3 inline-block mr-2 opacity-60" />
+                              {b}
+                            </button>
+                          ))}
+                        {branches.filter((b) => b.toLowerCase().includes(branch.toLowerCase())).length === 0 && (
+                          <div className="px-2 py-2 text-sm text-muted-foreground font-mono text-center">
+                            No matching branches
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
                   )}
                 </div>
               )}
@@ -338,8 +365,8 @@ export default function CreateAgentTaskDialog({
                   {storedZipInfo?.has_file && (
                     <div
                       className={`p-2 rounded border cursor-pointer transition-colors ${useStoredZip
-                          ? 'border-emerald-500/50 bg-emerald-950/30'
-                          : 'border-border hover:border-border bg-muted/50'
+                        ? 'border-emerald-500/50 bg-emerald-950/30'
+                        : 'border-border hover:border-border bg-muted/50'
                         }`}
                       onClick={() => setUseStoredZip(true)}
                     >
@@ -358,8 +385,8 @@ export default function CreateAgentTaskDialog({
 
                   <div
                     className={`p-2 rounded border cursor-pointer transition-colors ${!useStoredZip && zipFile
-                        ? 'border-amber-500/50 bg-amber-950/30'
-                        : 'border-border hover:border-border bg-muted/50'
+                      ? 'border-amber-500/50 bg-amber-950/30'
+                      : 'border-border hover:border-border bg-muted/50'
                       }`}
                   >
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -538,8 +565,8 @@ function ProjectItem({
   return (
     <div
       className={`flex items-center gap-3 p-3 cursor-pointer rounded transition-all ${selected
-          ? "bg-primary/10 border border-primary/50"
-          : "hover:bg-muted border border-transparent"
+        ? "bg-primary/10 border border-primary/50"
+        : "hover:bg-muted border border-transparent"
         }`}
       onClick={onSelect}
     >
@@ -558,8 +585,8 @@ function ProjectItem({
           </span>
           <Badge
             className={`text-xs px-1 py-0 font-mono ${isRepo
-                ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                : "bg-amber-500/20 text-amber-400 border-amber-500/30"
+              ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+              : "bg-amber-500/20 text-amber-400 border-amber-500/30"
               }`}
           >
             {isRepo ? "REPO" : "ZIP"}

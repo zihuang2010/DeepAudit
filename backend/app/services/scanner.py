@@ -358,7 +358,7 @@ async def get_codeup_repository_id(repo_name: str, org_id: str, token: str = Non
     raise Exception(f"未找到名为 '{repo_name}' 的仓库，请检查仓库名称或确认仓库可访问")
 
 async def get_codeup_branches(repo_url: str, token: str = None, org_id: str = None) -> List[str]:
-    """获取 Codeup 仓库分支列表"""
+    """获取 Codeup 仓库分支列表（支持分页，获取所有分支）"""
     repo_info = parse_repository_url(repo_url, "codeup")
     organization_id = org_id or settings.CODEUP_ORG_ID
     
@@ -368,15 +368,40 @@ async def get_codeup_branches(repo_url: str, token: str = None, org_id: str = No
     repo_name = repo_info['repo']
     repository_id = await get_codeup_repository_id(repo_name, organization_id, token)
     
-    branches_url = (
-        f"https://openapi-rdc.aliyuncs.com/oapi/v1/codeup/organizations/"
-        f"{organization_id}/repositories/{repository_id}/branches"
-    )
+    all_branches = []
+    page = 1
+    per_page = 100  # Codeup API 最大每页 100 条
     
-    branches_data = await codeup_api(branches_url, token)
-    result = branches_data if isinstance(branches_data, list) else branches_data.get('result', [])
+    while True:
+        branches_url = (
+            f"https://openapi-rdc.aliyuncs.com/oapi/v1/codeup/organizations/"
+            f"{organization_id}/repositories/{repository_id}/branches"
+            f"?page={page}&perPage={per_page}"
+        )
+        
+        branches_data = await codeup_api(branches_url, token)
+        result = branches_data if isinstance(branches_data, list) else branches_data.get('result', [])
+        
+        if not result:
+            break
+        
+        for b in result:
+            if b:
+                name = b.get('name', b.get('refName', ''))
+                if name:
+                    all_branches.append(name)
+        
+        # 如果返回的数量小于 per_page，说明没有更多数据
+        if len(result) < per_page:
+            break
+        
+        page += 1
+        
+        # 安全限制：最多获取 50 页（5000 个分支）
+        if page > 50:
+            break
     
-    return [b.get('name', b.get('refName', '')) for b in result if b]
+    return all_branches
 
 async def get_codeup_files(repo_url: str, branch: str, token: str = None, 
                            org_id: str = None, exclude_patterns: List[str] = None) -> List[Dict[str, str]]:

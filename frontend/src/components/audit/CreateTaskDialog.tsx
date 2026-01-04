@@ -92,6 +92,7 @@ export default function CreateTaskDialog({
   const [branch, setBranch] = useState("main");
   const [branches, setBranches] = useState<string[]>([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
+  const [branchListOpen, setBranchListOpen] = useState(false);  // 控制分支列表显示
   const [excludePatterns, setExcludePatterns] = useState(DEFAULT_EXCLUDES);
   const [selectedFiles, setSelectedFiles] = useState<string[] | undefined>();
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -409,29 +410,64 @@ export default function CreateTaskDialog({
                 </span>
 
                 {isRepositoryProject(selectedProject) ? (
-                  <div className="flex items-center gap-3 p-3 border border-border rounded bg-blue-50 dark:bg-blue-950/20">
-                    <GitBranch className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    <span className="font-mono text-base text-muted-foreground w-12">
-                      分支
-                    </span>
-                    {loadingBranches ? (
-                      <div className="flex items-center gap-2 flex-1">
-                        <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
-                        <span className="text-sm text-blue-600 dark:text-blue-400 font-mono">加载中...</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 p-3 border border-border rounded bg-blue-50 dark:bg-blue-950/20">
+                      <GitBranch className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                      <span className="font-mono text-base text-muted-foreground flex-shrink-0">
+                        分支
+                      </span>
+                      {loadingBranches ? (
+                        <div className="flex items-center gap-2 flex-1">
+                          <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
+                          <span className="text-sm text-blue-600 dark:text-blue-400 font-mono">加载中...</span>
+                        </div>
+                      ) : (
+                        <Input
+                          placeholder="搜索或输入分支名..."
+                          value={branch}
+                          onChange={(e) => setBranch(e.target.value)}
+                          onFocus={() => setBranchListOpen(true)}
+                          className="h-9 flex-1 cyber-input font-mono"
+                        />
+                      )}
+                    </div>
+                    {/* 分支搜索结果列表 */}
+                    {!loadingBranches && branches.length > 0 && branchListOpen && (
+                      <div className="max-h-[150px] overflow-y-auto border border-border rounded bg-background">
+                        <div className="p-1 space-y-0.5">
+                          {branches
+                            .filter((b) => !branch || b.toLowerCase().includes(branch.toLowerCase()))
+                            .slice(0, 50)
+                            .map((b) => (
+                              <button
+                                key={b}
+                                type="button"
+                                onClick={() => {
+                                  setBranch(b);
+                                  setBranchListOpen(false);  // 选中后关闭列表
+                                }}
+                                className={`w-full text-left px-3 py-1.5 rounded text-sm font-mono transition-colors flex items-center gap-2 ${branch === b
+                                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-medium'
+                                  : 'text-foreground hover:bg-muted'
+                                  }`}
+                              >
+                                <GitBranch className="w-3 h-3 opacity-60 flex-shrink-0" />
+                                <span className="truncate">{b}</span>
+                                {branch === b && <span className="ml-auto text-xs">✓</span>}
+                              </button>
+                            ))}
+                          {branches.filter((b) => !branch || b.toLowerCase().includes(branch.toLowerCase())).length === 0 && (
+                            <div className="px-3 py-2 text-sm text-muted-foreground font-mono text-center">
+                              未找到匹配的分支，将使用输入的分支名
+                            </div>
+                          )}
+                          {branches.filter((b) => !branch || b.toLowerCase().includes(branch.toLowerCase())).length > 50 && (
+                            <div className="px-3 py-1.5 text-xs text-muted-foreground font-mono text-center border-t border-border">
+                              还有更多结果，请输入更精确的关键词
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <Select value={branch} onValueChange={setBranch}>
-                        <SelectTrigger className="h-9 flex-1 cyber-input">
-                          <SelectValue placeholder="选择分支" />
-                        </SelectTrigger>
-                        <SelectContent className="cyber-dialog border-border">
-                          {branches.map((b) => (
-                            <SelectItem key={b} value={b} className="font-mono">
-                              {b}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     )}
                   </div>
                 ) : (
