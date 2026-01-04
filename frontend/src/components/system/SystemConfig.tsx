@@ -45,6 +45,7 @@ interface SystemConfigData {
   llmProvider: string; llmApiKey: string; llmModel: string; llmBaseUrl: string;
   llmTimeout: number; llmTemperature: number; llmMaxTokens: number;
   githubToken: string; gitlabToken: string; giteaToken: string;
+  codeupToken: string; codeupOrgId: string;
   maxAnalyzeFiles: number; llmConcurrency: number; llmGapMs: number; outputLanguage: string;
 }
 
@@ -92,6 +93,8 @@ export function SystemConfig() {
           githubToken: otherConfig.githubToken || '',
           gitlabToken: otherConfig.gitlabToken || '',
           giteaToken: otherConfig.giteaToken || '',
+          codeupToken: otherConfig.codeupToken || '',
+          codeupOrgId: otherConfig.codeupOrgId || '',
           maxAnalyzeFiles: otherConfig.maxAnalyzeFiles ?? 0,
           llmConcurrency: otherConfig.llmConcurrency || 3,
           llmGapMs: otherConfig.llmGapMs || 2000,
@@ -112,6 +115,7 @@ export function SystemConfig() {
           llmProvider: 'openai', llmApiKey: '', llmModel: '', llmBaseUrl: '',
           llmTimeout: 150000, llmTemperature: 0.1, llmMaxTokens: 4096,
           githubToken: '', gitlabToken: '', giteaToken: '',
+          codeupToken: '', codeupOrgId: '',
           maxAnalyzeFiles: 0, llmConcurrency: 3, llmGapMs: 2000, outputLanguage: 'zh-CN',
         });
       }
@@ -121,6 +125,7 @@ export function SystemConfig() {
         llmProvider: 'openai', llmApiKey: '', llmModel: '', llmBaseUrl: '',
         llmTimeout: 150000, llmTemperature: 0.1, llmMaxTokens: 4096,
         githubToken: '', gitlabToken: '', giteaToken: '',
+        codeupToken: '', codeupOrgId: '',
         maxAnalyzeFiles: 0, llmConcurrency: 3, llmGapMs: 2000, outputLanguage: 'zh-CN',
       });
     } finally {
@@ -233,6 +238,7 @@ export function SystemConfig() {
         },
         otherConfig: {
           githubToken: config.githubToken, gitlabToken: config.gitlabToken, giteaToken: config.giteaToken,
+          codeupToken: config.codeupToken, codeupOrgId: config.codeupOrgId,
           maxAnalyzeFiles: config.maxAnalyzeFiles, llmConcurrency: config.llmConcurrency,
           llmGapMs: config.llmGapMs, outputLanguage: config.outputLanguage,
         },
@@ -252,6 +258,8 @@ export function SystemConfig() {
           githubToken: otherConfig.githubToken || '',
           gitlabToken: otherConfig.gitlabToken || '',
           giteaToken: otherConfig.giteaToken || '',
+          codeupToken: otherConfig.codeupToken || '',
+          codeupOrgId: otherConfig.codeupOrgId || '',
           maxAnalyzeFiles: otherConfig.maxAnalyzeFiles ?? 0,
           llmConcurrency: otherConfig.llmConcurrency || 3,
           llmGapMs: otherConfig.llmGapMs || 2000,
@@ -733,6 +741,35 @@ export function SystemConfig() {
                 <span className="text-primary">
                   [your-gitea-instance]/user/settings/applications
                 </span>
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-muted-foreground uppercase">Codeup Token (可选)</Label>
+              <Input
+                type="password"
+                value={config.codeupToken}
+                onChange={(e) => updateConfig('codeupToken', e.target.value)}
+                placeholder="个人访问令牌"
+                className="h-10 cyber-input"
+              />
+              <p className="text-xs text-muted-foreground">
+                阿里云云效代码托管。获取:{' '}
+                <a href="https://devops.aliyun.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  devops.aliyun.com → 个人设置 → 访问令牌
+                </a>
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-muted-foreground uppercase">Codeup 企业ID (可选)</Label>
+              <Input
+                type="text"
+                value={config.codeupOrgId}
+                onChange={(e) => updateConfig('codeupOrgId', e.target.value)}
+                placeholder="organizationId"
+                className="h-10 cyber-input"
+              />
+              <p className="text-xs text-muted-foreground">
+                在云效 URL 中获取: https://devops.aliyun.com/organization/<strong>企业ID</strong>/...
               </p>
             </div>
             <div className="bg-muted border border-border p-4 rounded-lg text-xs">

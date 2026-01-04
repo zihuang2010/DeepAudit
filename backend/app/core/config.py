@@ -68,6 +68,10 @@ class Settings(BaseSettings):
     # Gitea配置
     GITEA_TOKEN: Optional[str] = None
     
+    # Codeup (阿里云云效) 配置
+    CODEUP_TOKEN: Optional[str] = None
+    CODEUP_ORG_ID: Optional[str] = None  # 云效企业ID (organizationId)
+    
     # 扫描配置
     MAX_ANALYZE_FILES: int = 0  # 最大分析文件数，0表示无限制
     MAX_FILE_SIZE_BYTES: int = 200 * 1024  # 最大文件大小 200KB

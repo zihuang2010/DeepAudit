@@ -65,6 +65,27 @@ def parse_repository_url(repo_url: str, repo_type: str) -> Dict[str, str]:
         owner, repo = path_parts[0], path_parts[1]
         api_base = f"{base}/api/v1"
 
+    elif repo_type == "codeup":
+        # Codeup (阿里云云效) URL 格式:
+        # https://codeup.aliyun.com/{orgId}/{group}/{repo}
+        # https://codeup.aliyun.com/{orgId}/{repo}.git
+        if len(path_parts) >= 2:
+            org_id = path_parts[0]
+            if len(path_parts) >= 3:
+                # group/repo 格式
+                group = path_parts[1]
+                repo = path_parts[2]
+                owner = f"{org_id}/{group}"
+            else:
+                # 直接 repo 格式
+                owner = org_id
+                repo = path_parts[1]
+        else:
+            raise ValueError("Codeup 仓库 URL 格式错误，应为 https://codeup.aliyun.com/{orgId}/{repo}")
+        
+        # Codeup OpenAPI 端点
+        api_base = "https://devops.cn-hangzhou.aliyuncs.com"
+
     else:
         raise ValueError(f"不支持的仓库类型: {repo_type}")
 

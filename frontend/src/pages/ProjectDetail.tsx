@@ -73,6 +73,21 @@ export default function ProjectDetail() {
     }
   }, [activeTab, tasks]);
 
+  // 当切换到 settings 标签时，自动填充表单数据
+  useEffect(() => {
+    if (activeTab === 'settings' && project) {
+      setEditForm({
+        name: project.name,
+        description: project.description || "",
+        source_type: project.source_type || "repository",
+        repository_url: project.repository_url || "",
+        repository_type: project.repository_type || "github",
+        default_branch: project.default_branch || "main",
+        programming_languages: project.programming_languages ? JSON.parse(project.programming_languages) : []
+      });
+    }
+  }, [activeTab, project]);
+
   const loadLatestIssues = async () => {
     const completedTasks = tasks.filter(t => t.status === 'completed').sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     if (completedTasks.length > 0) {

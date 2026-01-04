@@ -39,7 +39,7 @@ RUN apt-get update && \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # 配置 uv 使用官方 PyPI（国内镜像不稳定时使用）
-ENV UV_INDEX_URL=https://pypi.org/simple/
+ENV UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 
 # 复制依赖文件
 COPY pyproject.toml uv.lock README.md ./

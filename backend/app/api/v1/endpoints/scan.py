@@ -399,7 +399,7 @@ async def get_user_config_dict(db: AsyncSession, user_id: str) -> dict:
         'qwenApiKey', 'deepseekApiKey', 'zhipuApiKey', 'moonshotApiKey',
         'baiduApiKey', 'minimaxApiKey', 'doubaoApiKey'
     ]
-    SENSITIVE_OTHER_FIELDS = ['githubToken', 'gitlabToken']
+    SENSITIVE_OTHER_FIELDS = ['githubToken', 'gitlabToken', 'giteaToken', 'codeupToken', 'codeupOrgId']
     
     def decrypt_config(config: dict, sensitive_fields: list) -> dict:
         """解密配置中的敏感字段"""

@@ -24,7 +24,7 @@ SENSITIVE_LLM_FIELDS = [
     'qwenApiKey', 'deepseekApiKey', 'zhipuApiKey', 'moonshotApiKey',
     'baiduApiKey', 'minimaxApiKey', 'doubaoApiKey'
 ]
-SENSITIVE_OTHER_FIELDS = ['githubToken', 'gitlabToken']
+SENSITIVE_OTHER_FIELDS = ['githubToken', 'gitlabToken', 'giteaToken', 'codeupToken', 'codeupOrgId']
 
 
 def encrypt_config(config: dict, sensitive_fields: list) -> dict:
@@ -74,6 +74,9 @@ class OtherConfigSchema(BaseModel):
     """其他配置Schema"""
     githubToken: Optional[str] = None
     gitlabToken: Optional[str] = None
+    giteaToken: Optional[str] = None
+    codeupToken: Optional[str] = None
+    codeupOrgId: Optional[str] = None
     maxAnalyzeFiles: Optional[int] = None
     llmConcurrency: Optional[int] = None
     llmGapMs: Optional[int] = None
@@ -126,6 +129,9 @@ def get_default_config() -> dict:
         "otherConfig": {
             "githubToken": settings.GITHUB_TOKEN or "",
             "gitlabToken": settings.GITLAB_TOKEN or "",
+            "giteaToken": settings.GITEA_TOKEN or "",
+            "codeupToken": settings.CODEUP_TOKEN or "",
+            "codeupOrgId": settings.CODEUP_ORG_ID or "",
             "maxAnalyzeFiles": settings.MAX_ANALYZE_FILES,
             "llmConcurrency": settings.LLM_CONCURRENCY,
             "llmGapMs": settings.LLM_GAP_MS,

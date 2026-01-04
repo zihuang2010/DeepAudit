@@ -27,6 +27,7 @@ export const REPOSITORY_PLATFORM_LABELS: Record<RepositoryPlatform, string> = {
   github: 'GitHub',
   gitlab: 'GitLab',
   gitea: 'Gitea',
+  codeup: 'Codeup (云效)',
   other: '其他',
 };
 
@@ -66,5 +67,6 @@ export const PLATFORM_COLORS: Record<RepositoryPlatform, {
   github: { bg: 'bg-foreground', text: 'text-background' },
   gitlab: { bg: 'bg-orange-500', text: 'text-white' },
   gitea: { bg: 'bg-green-600', text: 'text-white' },
+  codeup: { bg: 'bg-blue-500', text: 'text-white' },
   other: { bg: 'bg-muted-foreground', text: 'text-background' }
 };

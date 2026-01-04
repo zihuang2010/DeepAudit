@@ -411,7 +411,7 @@ async def get_project_files(
         from app.core.config import settings
         from app.services.git_ssh_service import GitSSHOperations
 
-        SENSITIVE_OTHER_FIELDS = ['githubToken', 'gitlabToken', 'sshPrivateKey']
+        SENSITIVE_OTHER_FIELDS = ['githubToken', 'gitlabToken', 'codeupToken', 'codeupOrgId', 'sshPrivateKey']
 
         result = await db.execute(
             select(UserConfig).where(UserConfig.user_id == current_user.id)
@@ -420,6 +420,8 @@ async def get_project_files(
 
         github_token = settings.GITHUB_TOKEN
         gitlab_token = settings.GITLAB_TOKEN
+        codeup_token = settings.CODEUP_TOKEN
+        codeup_org_id = settings.CODEUP_ORG_ID
         ssh_private_key = None
 
         if config and config.other_config:
@@ -431,6 +433,10 @@ async def get_project_files(
                         github_token = decrypted_val
                     elif field == 'gitlabToken':
                         gitlab_token = decrypted_val
+                    elif field == 'codeupToken':
+                        codeup_token = decrypted_val
+                    elif field == 'codeupOrgId':
+                        codeup_org_id = decrypted_val
                     elif field == 'sshPrivateKey':
                         ssh_private_key = decrypted_val
 
@@ -467,8 +473,13 @@ async def get_project_files(
                     # 传入用户自定义排除模式
                     repo_files = await get_gitlab_files(project.repository_url, target_branch, gitlab_token, parsed_exclude_patterns)
                     files = [{"path": f["path"], "size": 0} for f in repo_files]
+                elif repo_type == "codeup":
+                    # Codeup (云效) 仓库
+                    from app.services.scanner import get_codeup_files
+                    repo_files = await get_codeup_files(project.repository_url, target_branch, codeup_token, codeup_org_id, parsed_exclude_patterns)
+                    files = [{"path": f["path"], "size": 0} for f in repo_files]
                 else:
-                    raise HTTPException(status_code=400, detail="不支持的仓库类型")
+                    raise HTTPException(status_code=400, detail="不支持的仓库类型，请选择 GitHub, GitLab 或 Codeup")
         except HTTPException:
             raise
         except Exception as e:
@@ -526,7 +537,7 @@ async def scan_project(
         'qwenApiKey', 'deepseekApiKey', 'zhipuApiKey', 'moonshotApiKey',
         'baiduApiKey', 'minimaxApiKey', 'doubaoApiKey'
     ]
-    SENSITIVE_OTHER_FIELDS = ['githubToken', 'gitlabToken']
+    SENSITIVE_OTHER_FIELDS = ['githubToken', 'gitlabToken', 'giteaToken', 'codeupToken', 'codeupOrgId']
 
     def decrypt_config(config_dict: dict, sensitive_fields: list) -> dict:
         """解密配置中的敏感字段"""
@@ -715,8 +726,10 @@ async def get_project_branches(
     github_token = settings.GITHUB_TOKEN
     gitea_token = settings.GITEA_TOKEN
     gitlab_token = settings.GITLAB_TOKEN
+    codeup_token = settings.CODEUP_TOKEN
+    codeup_org_id = settings.CODEUP_ORG_ID
 
-    SENSITIVE_OTHER_FIELDS = ['githubToken', 'gitlabToken', 'giteaToken']
+    SENSITIVE_OTHER_FIELDS = ['githubToken', 'gitlabToken', 'giteaToken', 'codeupToken', 'codeupOrgId']
     
     if config and config.other_config:
         import json
@@ -730,6 +743,10 @@ async def get_project_branches(
                     gitlab_token = decrypted_val
                 elif field == 'giteaToken':
                     gitea_token = decrypted_val
+                elif field == 'codeupToken':
+                    codeup_token = decrypted_val
+                elif field == 'codeupOrgId':
+                    codeup_org_id = decrypted_val
     
     repo_type = project.repository_type or "other"
     
@@ -749,6 +766,11 @@ async def get_project_branches(
             if not gitea_token:
                 print("[Branch] 警告: Gitea Token 未配置，可能无法访问私有仓库")
             branches = await get_gitea_branches(project.repository_url, gitea_token)
+        elif repo_type == "codeup":
+            if not codeup_token or not codeup_org_id:
+                print("[Branch] 警告: Codeup Token 或企业ID未配置")
+            from app.services.scanner import get_codeup_branches
+            branches = await get_codeup_branches(project.repository_url, codeup_token, codeup_org_id)
         else:
             # 对于其他类型，返回默认分支
             print(f"[Branch] 仓库类型 '{repo_type}' 不支持获取分支，返回默认分支")

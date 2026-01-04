@@ -117,8 +117,6 @@ async def github_api(url: str, token: str = None) -> Any:
             raise Exception(f"GitHub API {response.status_code}: {url}")
         return response.json()
 
-
-
 async def gitea_api(url: str, token: str = None) -> Any:
     """调用Gitea API"""
     headers = {"Content-Type": "application/json"}
@@ -135,7 +133,6 @@ async def gitea_api(url: str, token: str = None) -> Any:
         if response.status_code != 200:
             raise Exception(f"Gitea API {response.status_code}: {url}")
         return response.json()
-
 
 async def gitlab_api(url: str, token: str = None) -> Any:
     """调用GitLab API"""
@@ -154,6 +151,44 @@ async def gitlab_api(url: str, token: str = None) -> Any:
             raise Exception(f"GitLab API {response.status_code}: {url}")
         return response.json()
 
+async def codeup_api(url: str, token: str = None) -> Any:
+    """调用 Codeup API (阿里云云效)"""
+    headers = {
+        "Content-Type": "application/json",
+    }
+    
+    t = token or settings.CODEUP_TOKEN
+    if t:
+        headers["x-yunxiao-token"] = t  # 云效使用此 header 传递 token
+    
+    print(f"[Codeup API] 🔗 请求 URL: {url}")
+    print(f"[Codeup API] 🔑 Token 长度: {len(t) if t else 0}")
+    
+    async with httpx.AsyncClient(timeout=30) as client:
+        try:
+            response = await client.get(url, headers=headers)
+            print(f"[Codeup API] 📊 响应状态码: {response.status_code}")
+            
+            if response.status_code != 200:
+                # 打印响应内容以便调试
+                response_text = response.text[:500] if response.text else "(空)"
+                print(f"[Codeup API] ❌ 错误响应内容: {response_text}")
+            
+            if response.status_code == 401:
+                raise Exception("Codeup API 401：Token 无效或已过期，请检查配置")
+            if response.status_code == 403:
+                raise Exception("Codeup API 403：无访问权限，请检查 Token 权限或仓库设置")
+            if response.status_code == 404:
+                raise Exception("Codeup API 404：仓库或资源不存在，请检查仓库地址和企业ID")
+            if response.status_code != 200:
+                raise Exception(f"Codeup API {response.status_code}: {response.text[:200]}")
+            
+            data = response.json()
+            print(f"[Codeup API] ✅ 成功获取数据")
+            return data
+        except httpx.RequestError as e:
+            print(f"[Codeup API] ❌ 网络请求错误: {type(e).__name__}: {e}")
+            raise Exception(f"Codeup API 网络错误: {e}")
 
 async def fetch_file_content(url: str, headers: Dict[str, str] = None) -> Optional[str]:
     """获取文件内容"""
@@ -166,7 +201,6 @@ async def fetch_file_content(url: str, headers: Dict[str, str] = None) -> Option
             print(f"获取文件内容失败: {url}, 错误: {e}")
     return None
 
-
 async def get_github_branches(repo_url: str, token: str = None) -> List[str]:
     """获取GitHub仓库分支列表"""
     repo_info = parse_repository_url(repo_url, "github")
@@ -176,10 +210,6 @@ async def get_github_branches(repo_url: str, token: str = None) -> List[str]:
     branches_data = await github_api(branches_url, token)
     
     return [b["name"] for b in branches_data]
-
-
-
-
 
 async def get_gitea_branches(repo_url: str, token: str = None) -> List[str]:
     """获取Gitea仓库分支列表"""
@@ -191,7 +221,6 @@ async def get_gitea_branches(repo_url: str, token: str = None) -> List[str]:
     branches_data = await gitea_api(branches_url, token)
     
     return [b["name"] for b in branches_data]
-
 
 async def get_gitlab_branches(repo_url: str, token: str = None) -> List[str]:
     """获取GitLab仓库分支列表"""
@@ -212,7 +241,6 @@ async def get_gitlab_branches(repo_url: str, token: str = None) -> List[str]:
     branches_data = await gitlab_api(branches_url, extracted_token)
     
     return [b["name"] for b in branches_data]
-
 
 async def get_github_files(repo_url: str, branch: str, token: str = None, exclude_patterns: List[str] = None) -> List[Dict[str, str]]:
     """获取GitHub仓库文件列表"""
@@ -235,7 +263,6 @@ async def get_github_files(repo_url: str, branch: str, token: str = None, exclud
                 })
     
     return files
-
 
 async def get_gitlab_files(repo_url: str, branch: str, token: str = None, exclude_patterns: List[str] = None) -> List[Dict[str, str]]:
     """获取GitLab仓库文件列表"""
@@ -269,8 +296,6 @@ async def get_gitlab_files(repo_url: str, branch: str, token: str = None, exclud
     
     return files
 
-
-
 async def get_gitea_files(repo_url: str, branch: str, token: str = None, exclude_patterns: List[str] = None) -> List[Dict[str, str]]:
     """获取Gitea仓库文件列表"""
     repo_info = parse_repository_url(repo_url, "gitea")
@@ -294,6 +319,166 @@ async def get_gitea_files(repo_url: str, branch: str, token: str = None, exclude
             })
     
     return files
+
+async def fetch_codeup_file_content(url: str, token: str = None) -> Optional[str]:
+    """
+    获取 Codeup 文件内容
+    Codeup API 返回 JSON 格式，content 字段可能是 text 或 base64 编码
+    """
+    import base64
+    
+    try:
+        data = await codeup_api(url, token)
+        
+        # API 响应可能直接是结果或嵌套在 result 字段中
+        result = data.get('result', data) if isinstance(data, dict) else data
+        
+        if not result:
+            return None
+        
+        content = result.get('content', '')
+        encoding = result.get('encoding', 'text')
+        
+        if encoding == 'base64' and content:
+            # 解码 base64 内容
+            try:
+                decoded = base64.b64decode(content).decode('utf-8')
+                return decoded
+            except Exception as e:
+                print(f"[Codeup] ⚠️ Base64 解码失败: {e}")
+                return None
+        else:
+            return content
+            
+    except Exception as e:
+        print(f"[Codeup] ❌ 获取文件内容失败: {e}")
+        return None
+
+async def get_codeup_repository_id(repo_name: str, org_id: str, token: str = None) -> int:
+    """
+    通过仓库名称获取 Codeup 仓库的数字 ID
+    Codeup API 要求使用 int64 格式的 repositoryId，而不是仓库名称
+    """
+    print(f"[Codeup] 🔍 搜索仓库 '{repo_name}' 的数字ID...")
+    
+    # 正确的接入点和路径格式
+    # ListRepositories API: GET /oapi/v1/codeup/organizations/{organizationId}/repositories
+    search_url = (
+        f"https://openapi-rdc.aliyuncs.com/oapi/v1/codeup/organizations/"
+        f"{org_id}/repositories?search={quote(repo_name)}&perPage=50"
+    )
+    
+    try:
+        data = await codeup_api(search_url, token)
+        # API 可能直接返回列表或嵌套在 result 字段中
+        result = data if isinstance(data, list) else data.get('result', [])
+        
+        print(f"[Codeup] 📋 搜索返回 {len(result)} 个仓库")
+        
+        # 精确匹配仓库名称
+        clean_repo_name = repo_name.replace('.git', '')
+        for repo in result:
+            name = repo.get('name', '')
+            repo_id = repo.get('id')
+            print(f"[Codeup]   - 仓库: {name}, ID: {repo_id}")
+            
+            if name == clean_repo_name or name == repo_name:
+                print(f"[Codeup] ✅ 找到匹配仓库: {name} -> ID: {repo_id}")
+                return repo_id
+        
+        # 未找到精确匹配，抛出异常
+        raise Exception(f"未找到名为 '{repo_name}' 的仓库，请检查仓库名称或确认仓库可访问")
+        
+    except Exception as e:
+        print(f"[Codeup] ❌ 获取仓库ID失败: {e}")
+        raise
+
+async def get_codeup_branches(repo_url: str, token: str = None, org_id: str = None) -> List[str]:
+    """获取 Codeup 仓库分支列表"""
+    print(f"[Codeup] 📋 获取分支列表, URL: {repo_url}")
+    repo_info = parse_repository_url(repo_url, "codeup")
+    organization_id = org_id or settings.CODEUP_ORG_ID
+    
+    print(f"[Codeup] 📂 解析结果: repo={repo_info.get('repo')}, org_id={organization_id}")
+    
+    if not organization_id:
+        raise Exception("未配置 Codeup 企业ID (organizationId)，请在设置中配置")
+    
+    try:
+        # 第一步：获取仓库的数字 ID
+        repo_name = repo_info['repo']
+        repository_id = await get_codeup_repository_id(repo_name, organization_id, token)
+        
+        # 第二步：使用正确的 API 格式获取分支列表
+        branches_url = (
+            f"https://openapi-rdc.aliyuncs.com/oapi/v1/codeup/organizations/"
+            f"{organization_id}/repositories/{repository_id}/branches"
+        )
+        
+        branches_data = await codeup_api(branches_url, token)
+        result = branches_data if isinstance(branches_data, list) else branches_data.get('result', [])
+        print(f"[Codeup] ✅ 获取到 {len(result)} 个分支")
+        
+        return [b.get('name', b.get('refName', '')) for b in result if b]
+    except Exception as e:
+        print(f"[Codeup] ❌ 获取分支列表失败: {e}")
+        raise
+
+async def get_codeup_files(repo_url: str, branch: str, token: str = None, 
+                           org_id: str = None, exclude_patterns: List[str] = None) -> List[Dict[str, str]]:
+    """获取 Codeup 仓库文件列表"""
+    print(f"[Codeup] 📁 获取文件列表, URL: {repo_url}, 分支: {branch}")
+    repo_info = parse_repository_url(repo_url, "codeup")
+    organization_id = org_id or settings.CODEUP_ORG_ID
+    
+    print(f"[Codeup] 📂 解析结果: repo={repo_info.get('repo')}, org_id={organization_id}")
+    
+    if not organization_id:
+        raise Exception("未配置 Codeup 企业ID (organizationId)，请在设置中配置")
+    
+    try:
+        # 第一步：获取仓库的数字 ID
+        repo_name = repo_info['repo']
+        repository_id = await get_codeup_repository_id(repo_name, organization_id, token)
+        
+        # 第二步：使用正确的 API 格式获取文件树
+        # ListRepositoryTree API: GET /oapi/v1/codeup/organizations/{orgId}/repositories/{repoId}/files/tree
+        tree_url = (
+            f"https://openapi-rdc.aliyuncs.com/oapi/v1/codeup/organizations/"
+            f"{organization_id}/repositories/{repository_id}/files/tree"
+            f"?refName={quote(branch)}&type=RECURSIVE"
+        )
+        
+        tree_data = await codeup_api(tree_url, token)
+        result = tree_data if isinstance(tree_data, list) else tree_data.get('result', [])
+        print(f"[Codeup] 📊 API 返回 {len(result)} 个条目")
+        
+        files = []
+        for item in result:
+            item_type = item.get('type', '')
+            file_path = item.get('path', '')
+            
+            # blob = 文件, tree = 目录
+            if item_type == 'blob' and is_text_file(file_path) and not should_exclude(file_path, exclude_patterns):
+                # 构建文件内容 URL（使用正确的 API 格式）
+                file_url = (
+                    f"https://openapi-rdc.aliyuncs.com/oapi/v1/codeup/organizations/"
+                    f"{organization_id}/repositories/{repository_id}/files/{quote(file_path, safe='')}"
+                    f"?ref={quote(branch)}"
+                )
+                files.append({
+                    "path": file_path,
+                    "url": file_url,
+                    "token": token,
+                    "org_id": organization_id
+                })
+        
+        print(f"[Codeup] ✅ 过滤后得到 {len(files)} 个代码文件")
+        return files
+    except Exception as e:
+        print(f"[Codeup] ❌ 获取文件列表失败: {e}")
+        raise
+
 async def scan_repo_task(task_id: str, db_session_factory, user_config: dict = None):
     """
     后台仓库扫描任务
@@ -353,6 +538,8 @@ async def scan_repo_task(task_id: str, db_session_factory, user_config: dict = N
             github_token = user_other_config.get('githubToken') or settings.GITHUB_TOKEN
             gitlab_token = user_other_config.get('gitlabToken') or settings.GITLAB_TOKEN
             gitea_token = user_other_config.get('giteaToken') or settings.GITEA_TOKEN
+            codeup_token = user_other_config.get('codeupToken') or settings.CODEUP_TOKEN
+            codeup_org_id = user_other_config.get('codeupOrgId') or settings.CODEUP_ORG_ID
 
             
 
@@ -410,8 +597,10 @@ async def scan_repo_task(task_id: str, db_session_factory, user_config: dict = N
                                 extracted_gitlab_token = files[0].get('token')
                         elif repo_type == "gitea":
                             files = await get_gitea_files(repo_url, try_branch, gitea_token, task_exclude_patterns)
+                        elif repo_type == "codeup":
+                            files = await get_codeup_files(repo_url, try_branch, codeup_token, codeup_org_id, task_exclude_patterns)
                         else:
-                            raise Exception("不支持的仓库类型，仅支持 GitHub, GitLab 和 Gitea 仓库")
+                            raise Exception("不支持的仓库类型，仅支持 GitHub, GitLab, Gitea 和 Codeup 仓库")
 
                         if files:
                             actual_branch = try_branch
@@ -506,7 +695,13 @@ async def scan_repo_task(task_id: str, db_session_factory, user_config: dict = N
                                 headers["Authorization"] = f"Bearer {github_token}"
                         
                         print(f"📥 正在获取文件: {file_info['path']}")
-                        content = await fetch_file_content(file_info["url"], headers)
+                        
+                        # Codeup 使用专门的函数解析 JSON/base64 格式
+                        if repo_type == "codeup":
+                            token_to_use = file_info.get('token') or codeup_token
+                            content = await fetch_codeup_file_content(file_info["url"], token_to_use)
+                        else:
+                            content = await fetch_file_content(file_info["url"], headers)
 
                     if not content or not content.strip():
                         print(f"⚠️ 文件内容为空，跳过: {file_info['path']}")
@@ -519,7 +714,7 @@ async def scan_repo_task(task_id: str, db_session_factory, user_config: dict = N
                         continue
                     
                     file_lines = content.split('\n')
-                    total_lines = len(file_lines) + 1
+                    total_lines += len(file_lines)  # 累加代码行数
                     language = get_language_from_path(file_info["path"])
                     
                     print(f"🤖 正在调用 LLM 分析: {file_info['path']} ({language}, {len(content)} bytes)")
