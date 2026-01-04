@@ -551,8 +551,8 @@ export default function ProjectDetail() {
                             {getStatusIcon(task.status)}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors uppercase">
-                              {task.task_type === 'repository' ? '仓库审计' : '即时分析'}
+                            <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
+                              {task.task_name || (task.task_type === 'repository' ? '仓库审计' : '即时分析')}
                             </p>
                             <p className="text-xs text-muted-foreground font-mono">
                               {formatDate(task.created_at)}
@@ -600,8 +600,8 @@ export default function ProjectDetail() {
                         {getStatusIcon(task.status)}
                       </div>
                       <div>
-                        <h4 className="font-bold text-foreground uppercase">
-                          {task.task_type === 'repository' ? '仓库审计任务' : '即时分析任务'}
+                        <h4 className="font-bold text-foreground">
+                          {task.task_name || (task.task_type === 'repository' ? '仓库审计任务' : '即时分析任务')}
                         </h4>
                         <p className="text-sm text-muted-foreground font-mono">
                           创建于 {formatDate(task.created_at)}

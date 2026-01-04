@@ -88,6 +88,7 @@ export default function CreateTaskDialog({
   const navigate = useNavigate();
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [taskName, setTaskName] = useState("");  // 任务名称
   const [branch, setBranch] = useState("main");
   const [branches, setBranches] = useState<string[]>([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
@@ -184,6 +185,7 @@ export default function CreateTaskDialog({
         setSelectedProjectId(preselectedProjectId);
       }
       setSearchTerm("");
+      setTaskName("");  // 重置任务名称
       setShowAdvanced(false);
       const defaultRuleSet = ruleSets.find(r => r.is_default);
       setSelectedRuleSetId(defaultRuleSet?.id || ruleSets[0]?.id || "");
@@ -270,6 +272,7 @@ export default function CreateTaskDialog({
           filePaths: selectedFiles,
           ruleSetId: selectedRuleSetId || undefined,
           promptTemplateId: selectedPromptTemplateId || undefined,
+          taskName: taskName || undefined,
         });
       }
 
@@ -322,6 +325,23 @@ export default function CreateTaskDialog({
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            {/* 任务名称 */}
+            <div className="space-y-2">
+              <span className="text-sm font-mono font-bold uppercase text-muted-foreground">
+                任务名称（可选）
+              </span>
+              <Input
+                placeholder="例如：v2.0.1 安全审计"
+                value={taskName}
+                onChange={(e) => setTaskName(e.target.value)}
+                maxLength={100}
+                className="h-10 cyber-input"
+              />
+              <p className="text-xs text-muted-foreground font-mono">
+                留空将自动生成名称，如“审计任务-20260104-a1b2”
+              </p>
+            </div>
+
             {/* 项目选择 */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -669,8 +689,8 @@ function ProjectCard({
   return (
     <div
       className={`flex items-center gap-3 p-3 cursor-pointer rounded transition-all ${selected
-          ? "bg-primary/10 border border-primary/50"
-          : "hover:bg-muted border border-transparent"
+        ? "bg-primary/10 border border-primary/50"
+        : "hover:bg-muted border border-transparent"
         }`}
       onClick={onSelect}
     >
@@ -694,8 +714,8 @@ function ProjectCard({
           </span>
           <Badge
             className={`text-xs px-1 py-0 font-mono ${isRepo
-                ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30"
-                : "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
+              ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30"
+              : "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30"
               }`}
           >
             {isRepo ? "REPO" : "ZIP"}

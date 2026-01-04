@@ -65,6 +65,7 @@ class ProjectSchema(BaseModel):
 class AuditTaskSchema(BaseModel):
     id: str
     project_id: str
+    task_name: Optional[str] = None
     task_type: str
     status: str
     branch_name: Optional[str] = None

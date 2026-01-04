@@ -124,6 +124,7 @@ export interface CreateProjectForm {
 
 export interface CreateAuditTaskForm {
   project_id: string;
+  task_name?: string;  // 任务名称（可选）
   task_type: 'repository' | 'instant';
   branch_name?: string;
   exclude_patterns: string[];

@@ -12,6 +12,7 @@ class AuditTask(Base):
     project_id = Column(String, ForeignKey("projects.id"), nullable=False)
     created_by = Column(String, ForeignKey("users.id"), nullable=False)
     
+    task_name = Column(String(100), nullable=True)  # 任务名称，可选
     task_type = Column(String, nullable=False)
     status = Column(String, default="pending", index=True)
     branch_name = Column(String, nullable=True)

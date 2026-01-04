@@ -9,6 +9,7 @@ export async function runRepositoryAudit(params: {
   filePaths?: string[];
   ruleSetId?: string;
   promptTemplateId?: string;
+  taskName?: string;  // 任务名称（可选）
 }) {
   // 后端会从用户配置中读取 GitHub/GitLab Token，前端不需要传递
   // The backend handles everything now. 
@@ -21,6 +22,7 @@ export async function runRepositoryAudit(params: {
   const task = await api.createAuditTask({
     project_id: params.projectId,
     task_type: "repository",
+    task_name: params.taskName,
     branch_name: params.branch || "main",
     exclude_patterns: params.exclude || [],
     scan_config: {

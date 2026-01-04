@@ -489,6 +489,7 @@ async def get_project_files(
     return files
 
 class ScanRequest(BaseModel):
+    task_name: Optional[str] = None  # 任务名称（可选，留空自动生成）
     file_paths: Optional[List[str]] = None
     full_scan: bool = True
     exclude_patterns: Optional[List[str]] = None
@@ -514,10 +515,21 @@ async def scan_project(
     branch_name = scan_request.branch_name if scan_request else None
     exclude_patterns = scan_request.exclude_patterns if scan_request else None
 
+    # 生成任务名称：如果用户未提供，自动生成
+    import random
+    import string
+    from datetime import datetime
+    
+    task_name = scan_request.task_name if scan_request and scan_request.task_name else None
+    if not task_name:
+        rand_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+        task_name = f"审计任务-{datetime.now().strftime('%Y%m%d')}-{rand_suffix}"
+
     # Create Task Record
     task = AuditTask(
         project_id=project.id,
         created_by=current_user.id,
+        task_name=task_name,
         task_type="repository",
         status="pending",
         branch_name=branch_name or project.default_branch or "main",

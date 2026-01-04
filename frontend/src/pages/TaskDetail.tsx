@@ -87,9 +87,9 @@ function IssuesList({ issues }: { issues: AuditIssue[] }) {
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-start space-x-3">
           <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${issue.severity === 'critical' ? 'bg-rose-500/20 text-rose-400' :
-              issue.severity === 'high' ? 'bg-orange-500/20 text-orange-400' :
-                issue.severity === 'medium' ? 'bg-amber-500/20 text-amber-400' :
-                  'bg-sky-500/20 text-sky-400'
+            issue.severity === 'high' ? 'bg-orange-500/20 text-orange-400' :
+              issue.severity === 'medium' ? 'bg-amber-500/20 text-amber-400' :
+                'bg-sky-500/20 text-sky-400'
             }`}>
             {getTypeIcon(issue.issue_type)}
           </div>
@@ -601,6 +601,14 @@ export default function TaskDetail() {
               <h3 className="text-lg font-bold uppercase tracking-wider text-foreground">任务信息</h3>
             </div>
             <div className="p-6 space-y-4 font-mono">
+              {/* 任务名称 */}
+              {task.task_name && (
+                <div className="mb-4 pb-4 border-b border-border">
+                  <p className="text-xs font-bold text-muted-foreground uppercase mb-1">任务名称</p>
+                  <p className="text-lg font-bold text-foreground">{task.task_name}</p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs font-bold text-muted-foreground uppercase mb-1">任务类型</p>
