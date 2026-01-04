@@ -295,6 +295,16 @@ async def _execute_agent_task(task_id: str):
             github_token = other_config.get('githubToken') or settings.GITHUB_TOKEN
             gitlab_token = other_config.get('gitlabToken') or settings.GITLAB_TOKEN
             gitea_token = other_config.get('giteaToken') or settings.GITEA_TOKEN
+            
+            # 🔥 新增：获取 Codeup Token 和组织ID
+            codeup_token = other_config.get('codeupToken') or settings.CODEUP_TOKEN
+            codeup_org_id = other_config.get('codeupOrgId') or settings.CODEUP_ORG_ID
+            # 解密 Codeup Token（如果已加密）
+            if codeup_token and 'codeupToken' in other_config:
+                try:
+                    codeup_token = decrypt_sensitive_data(other_config['codeupToken'])
+                except Exception:
+                    pass  # 使用原值
 
             # 解密SSH私钥
             ssh_private_key = None
@@ -314,9 +324,11 @@ async def _execute_agent_task(task_id: str):
                 task.branch_name,
                 github_token=github_token,
                 gitlab_token=gitlab_token,
-                gitea_token=gitea_token,  # 🔥 新增
-                ssh_private_key=ssh_private_key,  # 🔥 新增SSH密钥
-                event_emitter=event_emitter,  # 🔥 新增
+                gitea_token=gitea_token,
+                codeup_token=codeup_token,  # 🔥 新增
+                codeup_org_id=codeup_org_id,  # 🔥 新增
+                ssh_private_key=ssh_private_key,
+                event_emitter=event_emitter,
             )
 
             # 🔥 自动修正 target_files 路径
@@ -2228,9 +2240,11 @@ async def _get_project_root(
     branch_name: Optional[str] = None,
     github_token: Optional[str] = None,
     gitlab_token: Optional[str] = None,
-    gitea_token: Optional[str] = None,  # 🔥 新增
-    ssh_private_key: Optional[str] = None,  # 🔥 新增：SSH私钥（用于SSH认证）
-    event_emitter: Optional[Any] = None,  # 🔥 新增：用于发送实时日志
+    gitea_token: Optional[str] = None,
+    codeup_token: Optional[str] = None,  # 🔥 新增：Codeup Token
+    codeup_org_id: Optional[str] = None,  # 🔥 新增：Codeup 组织ID
+    ssh_private_key: Optional[str] = None,
+    event_emitter: Optional[Any] = None,
 ) -> str:
     """
     获取项目根目录
@@ -2517,6 +2531,17 @@ async def _get_project_root(
                     parsed.fragment
                 ))
                 await emit(f"🔐 使用 Gitea Token 认证")
+            elif (repo_type == "codeup" or "codeup.aliyun.com" in repo_url) and codeup_token:
+                # 🔥 Codeup 认证：使用 x-token:<token>@host 格式
+                auth_url = urlunparse((
+                    parsed.scheme,
+                    f"x-token:{codeup_token}@{parsed.netloc}",
+                    parsed.path,
+                    parsed.params,
+                    parsed.query,
+                    parsed.fragment
+                ))
+                await emit(f"🔐 使用 Codeup Token 认证")
             elif is_ssh_url and ssh_private_key:
                 await emit(f"🔐 使用 SSH Key 认证")
                 
