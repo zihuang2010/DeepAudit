@@ -358,7 +358,18 @@ async def get_codeup_repository_id(repo_name: str, org_id: str, token: str = Non
     raise Exception(f"未找到名为 '{repo_name}' 的仓库，请检查仓库名称或确认仓库可访问")
 
 async def get_codeup_branches(repo_url: str, token: str = None, org_id: str = None) -> List[str]:
-    """获取 Codeup 仓库分支列表（支持分页，获取所有分支）"""
+    """
+    获取 Codeup 仓库分支列表（优化版：并发获取所有分支）
+    
+    优化点：
+    1. 先获取第一页判断是否需要分页
+    2. 并发获取剩余页面（提升性能）
+    3. 完善的日志记录
+    4. 更好的错误处理
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     repo_info = parse_repository_url(repo_url, "codeup")
     organization_id = org_id or settings.CODEUP_ORG_ID
     
@@ -368,39 +379,79 @@ async def get_codeup_branches(repo_url: str, token: str = None, org_id: str = No
     repo_name = repo_info['repo']
     repository_id = await get_codeup_repository_id(repo_name, organization_id, token)
     
-    all_branches = []
-    page = 1
     per_page = 100  # Codeup API 最大每页 100 条
+    max_pages = 50  # 安全限制：最多 50 页（5000 个分支）
     
-    while True:
-        branches_url = (
+    def build_branches_url(page: int) -> str:
+        return (
             f"https://openapi-rdc.aliyuncs.com/oapi/v1/codeup/organizations/"
             f"{organization_id}/repositories/{repository_id}/branches"
             f"?page={page}&perPage={per_page}"
         )
-        
-        branches_data = await codeup_api(branches_url, token)
-        result = branches_data if isinstance(branches_data, list) else branches_data.get('result', [])
-        
-        if not result:
-            break
-        
+    
+    def extract_branch_names(result: list) -> List[str]:
+        """从 API 响应中提取分支名称"""
+        names = []
         for b in result:
             if b:
-                name = b.get('name', b.get('refName', ''))
+                name = b.get('name') or b.get('refName', '')
                 if name:
-                    all_branches.append(name)
+                    names.append(name)
+        return names
+    
+    async def fetch_page(page: int) -> List[str]:
+        """获取指定页面的分支"""
+        try:
+            url = build_branches_url(page)
+            data = await codeup_api(url, token)
+            result = data if isinstance(data, list) else data.get('result', [])
+            return extract_branch_names(result)
+        except Exception as e:
+            logger.warning(f"获取分支第 {page} 页失败: {e}")
+            return []
+    
+    # Step 1: 获取第一页，判断是否需要继续
+    logger.info(f"开始获取 Codeup 仓库分支: {repo_name}")
+    first_page_url = build_branches_url(1)
+    
+    try:
+        first_data = await codeup_api(first_page_url, token)
+        first_result = first_data if isinstance(first_data, list) else first_data.get('result', [])
+    except Exception as e:
+        logger.error(f"获取分支列表失败: {e}")
+        raise Exception(f"获取分支列表失败: {e}")
+    
+    all_branches = extract_branch_names(first_result)
+    
+    # 如果第一页数据不满，说明没有更多数据
+    if len(first_result) < per_page:
+        logger.info(f"获取到 {len(all_branches)} 个分支（单页）")
+        return all_branches
+    
+    # Step 2: 并发获取剩余页面
+    # 预估总页数（保守估计，逐步获取）
+    pages_to_fetch = list(range(2, max_pages + 1))
+    
+    # 分批并发（每批 5 页，避免请求过快）
+    batch_size = 5
+    for i in range(0, len(pages_to_fetch), batch_size):
+        batch_pages = pages_to_fetch[i:i + batch_size]
+        tasks = [fetch_page(p) for p in batch_pages]
+        results = await asyncio.gather(*tasks)
         
-        # 如果返回的数量小于 per_page，说明没有更多数据
-        if len(result) < per_page:
-            break
+        has_more = False
+        for page_idx, branch_names in enumerate(results):
+            if branch_names:
+                all_branches.extend(branch_names)
+                # 如果该页数据满了，可能还有更多
+                if len(branch_names) >= per_page:
+                    has_more = True
         
-        page += 1
-        
-        # 安全限制：最多获取 50 页（5000 个分支）
-        if page > 50:
+        # 如果这批没有任何一页是满的，停止获取
+        if not has_more:
             break
     
+    logger.info(f"获取到 {len(all_branches)} 个分支（多页）")
     return all_branches
 
 async def get_codeup_files(repo_url: str, branch: str, token: str = None, 
